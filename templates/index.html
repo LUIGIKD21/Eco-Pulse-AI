@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Eco Pulse AI Forecast</title>
+    <style>
+        body { font-family: sans-serif; padding: 50px; }
+        .container { max-width: 500px; margin: auto; }
+        input, button { padding: 10px; width: 100%; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Eco Pulse AI</h1>
+        <input type="text" id="location" placeholder="Enter Location (e.g., Parsippany)">
+        <button onclick="getForecast()">Get Forecast</button>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        async function getForecast() {
+            const location = document.getElementById('location').value;
+            const response = await fetch('/api/v1/forecast', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-API-KEY': 'EcoPulseSecret2026'
+                },
+                body: JSON.stringify({ location: location })
+            });
+            const data = await response.json();
+            document.getElementById('result').innerText = JSON.stringify(data);
+        }
+    </script>
+</body>
+</html>
