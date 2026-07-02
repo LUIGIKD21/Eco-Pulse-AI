@@ -14,7 +14,6 @@ CORS(app)
 # DATABASE CONNECTION
 # ----------------------------------------------------------------------
 def get_db_connection():
-    """Connects to the database using environment variables."""
     return psycopg2.connect(
         host=os.environ.get("DB_HOST"),
         database=os.environ.get("DB_NAME"),
@@ -25,7 +24,7 @@ def get_db_connection():
 
 
 # ----------------------------------------------------------------------
-# ML ENGINE LOADING
+# ML ENGINE LOADING (WITH DEBUGGING)
 # ----------------------------------------------------------------------
 try:
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -34,11 +33,16 @@ try:
 
     xgb_model = joblib.load(model_path)
     scaler = joblib.load(scaler_path)
+
     print("Success: Real-world trained XGBoost grid model and scaler loaded.")
 except Exception as err:
     xgb_model = None
     scaler = None
     print(f"Warning: ML model artifacts could not be loaded ({err}).")
+
+# DEBUGGING PRINTS
+print(f"DEBUG: Model loaded? {xgb_model is not None}")
+print(f"DEBUG: Scaler loaded? {scaler is not None}")
 
 
 # ----------------------------------------------------------------------
@@ -46,13 +50,11 @@ except Exception as err:
 # ----------------------------------------------------------------------
 @app.route('/')
 def home():
-    """Serves the frontend interface."""
     return render_template('index.html')
 
 
 @app.route('/api/v1/forecast', methods=['POST'])
 def get_forecast():
-    """Handles dynamic location-based forecasting using the ML model."""
     api_key = request.headers.get('X-API-KEY')
     expected_key = os.environ.get('INTERNAL_API_KEY', 'EcoPulseSecret2026')
 
@@ -67,7 +69,6 @@ def get_forecast():
     predicted_load = 0.0
     if xgb_model and scaler:
         try:
-            # Map features to training shape: [Hour, DayOfWeek, Month, DayOfYear, Year]
             input_features = np.array([[target_time.hour, target_time.weekday(),
                                         target_time.month, target_time.timetuple().tm_yday,
                                         target_time.year]])
