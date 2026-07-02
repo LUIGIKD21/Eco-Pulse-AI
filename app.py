@@ -9,10 +9,38 @@ import numpy as np
 app = Flask(__name__)
 CORS(app)
 
+# ----------------------------------------------------------------------
+# DATABASE INFRASTRUCTURE
+# ----------------------------------------------------------------------
+def init_database_infrastructure():
+    """Initializes the prediction_logs table if it does not exist."""
+    try:
+        conn = psycopg2.connect(
+            host=os.environ.get("DB_HOST"),
+            database=os.environ.get("DB_NAME"),
+            user=os.environ.get("DB_USER"),
+            password=os.environ.get("DB_PASSWORD"),
+            port="5432"
+        )
+        cur = conn.cursor()
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS prediction_logs (
+                id SERIAL PRIMARY KEY,
+                timestamp TIMESTAMP NOT NULL,
+                location VARCHAR(100) NOT NULL,
+                actual_temp NUMERIC(5, 2) NOT NULL,
+                humidity NUMERIC(5, 2) NOT NULL,
+                predicted_kwh NUMERIC(10, 2) NOT NULL,
+                confidence_interval NUMERIC(3, 2) NOT NULL
+            );
+        """)
+        conn.commit()
+        cur.close()
+        conn.close()
+        print("Database schema verified/created successfully.")
+    except Exception as err:
+        print(f"Database initialization error: {err}")
 
-# ----------------------------------------------------------------------
-# DATABASE CONNECTION
-# ----------------------------------------------------------------------
 def get_db_connection():
     return psycopg2.connect(
         host=os.environ.get("DB_HOST"),
@@ -22,28 +50,17 @@ def get_db_connection():
         port="5432"
     )
 
-
 # ----------------------------------------------------------------------
-# ML ENGINE LOADING (WITH DEBUGGING)
+# ML ENGINE LOADING
 # ----------------------------------------------------------------------
 try:
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    model_path = os.path.join(BASE_DIR, "models", "eco_pulse_xgb.joblib")
-    scaler_path = os.path.join(BASE_DIR, "models", "scaler.joblib")
-
-    xgb_model = joblib.load(model_path)
-    scaler = joblib.load(scaler_path)
-
-    print("Success: Real-world trained XGBoost grid model and scaler loaded.")
+    xgb_model = joblib.load(os.path.join(BASE_DIR, "models", "eco_pulse_xgb.joblib"))
+    scaler = joblib.load(os.path.join(BASE_DIR, "models", "scaler.joblib"))
+    print("Success: XGBoost model and scaler loaded.")
 except Exception as err:
-    xgb_model = None
-    scaler = None
+    xgb_model, scaler = None, None
     print(f"Warning: ML model artifacts could not be loaded ({err}).")
-
-# DEBUGGING PRINTS
-print(f"DEBUG: Model loaded? {xgb_model is not None}")
-print(f"DEBUG: Scaler loaded? {scaler is not None}")
-
 
 # ----------------------------------------------------------------------
 # ROUTES
@@ -51,7 +68,6 @@ print(f"DEBUG: Scaler loaded? {scaler is not None}")
 @app.route('/')
 def home():
     return render_template('index.html')
-
 
 @app.route('/api/v1/forecast', methods=['POST'])
 def get_forecast():
@@ -65,33 +81,28 @@ def get_forecast():
     location = data.get("location", "Unknown Grid Zone")
     target_time = datetime.now()
 
-    # 1. ML Inference Engine Calculation
     predicted_load = 0.0
     if xgb_model and scaler:
         try:
-            input_features = np.array([[target_time.hour, target_time.weekday(),
-                                        target_time.month, target_time.timetuple().tm_yday,
-                                        target_time.year]])
-            scaled_features = scaler.transform(input_features)
-            predicted_load = float(xgb_model.predict(scaled_features)[0])
-        except Exception as ml_err:
-            print(f"Inference error: {ml_err}")
+            features = np.array([[target_time.hour, target_time.weekday(),
+                                  target_time.month, target_time.timetuple().tm_yday,
+                                  target_time.year]])
+            predicted_load = float(xgb_model.predict(scaler.transform(features))[0])
+        except Exception as e:
+            print(f"Inference error: {e}")
 
-    # 2. Database Persistence
     try:
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute(
-            """INSERT INTO prediction_logs
-               (timestamp, location, actual_temp, humidity, predicted_kwh, confidence_interval)
-               VALUES (%s, %s, %s, %s, %s, %s)""",
+            "INSERT INTO prediction_logs (timestamp, location, actual_temp, humidity, predicted_kwh, confidence_interval) VALUES (%s, %s, %s, %s, %s, %s)",
             (target_time, location, 22.2, 55.0, predicted_load, 0.95)
         )
         conn.commit()
         cur.close()
         conn.close()
-    except Exception as db_err:
-        print(f"Database logging skipped: {db_err}")
+    except Exception as e:
+        print(f"DB Error: {e}")
 
     return jsonify({
         "status": "success",
@@ -100,6 +111,6 @@ def get_forecast():
         "timestamp": target_time.isoformat()
     }), 200
 
-
 if __name__ == '__main__':
+    init_database_infrastructure()
     app.run(host='0.0.0.0', port=5000)
