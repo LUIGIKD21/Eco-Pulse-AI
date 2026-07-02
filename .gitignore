@@ -1,0 +1,10 @@
+# PyCharm project workspace profiles
+.idea/
+
+# Local cache execution environments
+__pycache__/
+*.pyc
+
+# Local runtime parameters and environment secrets
+.env
+instance/

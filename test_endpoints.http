@@ -1,0 +1,55 @@
+### Test Case 1: Live System Baseline (Default clock evaluation)
+POST http://127.0.0.1:5000/api/v1/forecast
+Content-Type: application/json
+X-API-KEY: EcoPulseSecret2026
+
+{
+  "location": "Parsippany Substation"
+}
+
+###
+
+### Test Case 2: Peak Summer AC Surge Simulation
+# Target: July 15th at 4:00 PM (16:00)
+# Evaluates if the engine recognizes high mid-summer afternoon demand
+POST http://127.0.0.1:5000/api/v1/forecast
+Content-Type: application/json
+X-API-KEY: EcoPulseSecret2026
+
+{
+  "location": "Parsippany Substation",
+  "timestamp": "2026-07-15T16:00:00"
+}
+
+###
+
+### Test Case 3: Late Night Spring Low Simulation
+# Target: April 20th at 3:00 AM (03:00)
+# Evaluates mild climate conditions and minimal grid activity hours
+POST http://127.0.0.1:5000/api/v1/forecast
+Content-Type: application/json
+X-API-KEY: EcoPulseSecret2026
+
+{
+  "location": "Parsippany Substation",
+  "timestamp": "2026-04-20T03:00:00"
+}
+
+###
+
+### Test Case 4: Security Authorization Failure Exception Check
+# Target: Send a request with an invalid API key to verify your 401 guardrail works
+POST http://127.0.0.1:5000/api/v1/forecast
+Content-Type: application/json
+X-API-KEY: WRONG_TOKEN_VALUE
+
+{
+  "location": "Parsippany Substation",
+  "timestamp": "2026-06-11T09:30:00"
+}
+
+###
+
+### Test Case 5: Database Persistence History Retrieval
+# Target: Query your database logging mechanism to view all prior logs
+GET http://127.0.0.1:5000/api/v1/history

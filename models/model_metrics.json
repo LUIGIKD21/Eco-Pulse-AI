@@ -1,0 +1,7 @@
+{
+    "r2_score_accuracy_pct": 83.8,
+    "mean_absolute_error_mw": 801.18,
+    "root_mean_squared_error_mw": 1048.22,
+    "training_sample_count": 121273,
+    "last_trained_timestamp": "2026-06-11T09:33:14.215214"
+}
