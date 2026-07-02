@@ -4,9 +4,10 @@
     <meta charset="UTF-8">
     <title>Eco Pulse AI Forecast</title>
     <style>
-        body { font-family: sans-serif; padding: 50px; }
-        .container { max-width: 500px; margin: auto; }
-        input, button { padding: 10px; width: 100%; margin: 10px 0; }
+        body { font-family: sans-serif; padding: 40px; text-align: center; }
+        .container { max-width: 500px; margin: auto; border: 1px solid #ccc; padding: 20px; border-radius: 8px; }
+        input, button { padding: 12px; width: 90%; margin: 10px 0; }
+        #result { margin-top: 20px; font-size: 1.2em; color: #333; }
     </style>
 </head>
 <body>
@@ -20,16 +21,22 @@
     <script>
         async function getForecast() {
             const location = document.getElementById('location').value;
-            const response = await fetch('/api/v1/forecast', {
+            const res = await fetch('/api/v1/forecast', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-API-KEY': 'EcoPulseSecret2026'
-                },
+                headers: {'Content-Type': 'application/json', 'X-API-KEY': 'EcoPulseSecret2026'},
                 body: JSON.stringify({ location: location })
             });
-            const data = await response.json();
-            document.getElementById('result').innerText = JSON.stringify(data);
+            const data = await res.json();
+
+            // Fixed display logic
+            if(data.status === 'success') {
+                document.getElementById('result').innerHTML = `
+                    <h3>Forecast for ${data.location}</h3>
+                    <p>Predicted Load: <strong>${data.forecast.predicted_load_mw} MW</strong></p>
+                `;
+            } else {
+                document.getElementById('result').innerText = "Error: " + data.error;
+            }
         }
     </script>
 </body>
